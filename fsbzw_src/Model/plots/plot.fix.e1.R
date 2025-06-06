@@ -1,0 +1,88 @@
+
+# =========================================
+# plot predicted fixations (Experiment 1)
+# =========================================
+plot.fix.e1 <- function(fName="", startStep=3, endStep=9,
+                     binSize = 20, cond="match"){
+  
+  clr1="#08519C"
+  clr2="gray55"
+  
+  mainLab = ifelse(cond == "match", "Match condition", "Misatch condition")
+  divergence = ifelse(cond == "match", 1367, 1765)
+  
+  dt.act = read.table(file = fName, header=T)
+  
+  # for each row assign fixation probability (1 or 0) to each picture
+  # based on the activation
+  # !! need a better decision criteria when the activations are the same;
+  # !! right now it assigns '1' to both
+  
+  
+  dt.act$max.act = apply(dt.act[,4:7], 1, max)
+  dt.act = subset(dt.act, max.act != 0)
+  
+  # dt.act$max.act = ifelse(dt.act$max.act == 0, 0.00000001, dt.act$max.act)
+  
+  dt.act$knopf.fix = as.numeric(dt.act$knopf.act == dt.act$max.act)
+  dt.act$flasche.fix = as.numeric(dt.act$flasche.act == dt.act$max.act)
+  dt.act$ballon.fix = as.numeric(dt.act$ballon.act == dt.act$max.act)
+  dt.act$blume.fix = as.numeric(dt.act$blume.act == dt.act$max.act)
+  
+  dt.act = subset(dt.act, stepNo %in% c(startStep:endStep))
+  dt.act$bin = round(dt.act$time / binSize) * binSize
+  
+  dt.sum = dt.act %>%
+    group_by(bin) %>%
+    summarise(knopfMeanFix = sum(knopf.fix)*100/(sum(flasche.fix) + sum(knopf.fix) + sum(ballon.fix) + sum(blume.fix)), 
+              flascheMeanFix = sum(flasche.fix)*100/(sum(flasche.fix) + sum(knopf.fix) + sum(ballon.fix) + sum(blume.fix)), 
+              ballonMeanFix = sum(ballon.fix)*100/(sum(flasche.fix) + sum(knopf.fix) + sum(ballon.fix) + sum(blume.fix)), 
+              blumeMeanFix = sum(blume.fix)*100/(sum(flasche.fix) + sum(knopf.fix) + sum(ballon.fix) + sum(blume.fix)), 
+              n = n())
+
+  # lines instead of fitting curves
+  lwd = 2
+  par(mar=c(2,3.5,1,1), col.main=clr2) #mai=, 
+  plot(ylim=c(0,100), xlim=c(900,3200), dt.sum$bin, dt.sum$knopfMeanFix, 
+       xaxt="n", 
+       col=clr1, type = 'n',
+       ylab="", xlab="", 
+       main= "", cex.main=1.5)
+  # main= mainLab, cex.main=1.5)
+  
+  mtext(side = 1, text = "Stages from possessive onward", line = 0.4)
+  mtext(side = 2, text = "Predicted fixation probability", line = 2.5)
+  lines(c(800,3400), c(25, 25), col=clr2, lwd=1, lty=3)
+
+  lines(dt.sum$bin, dt.sum$knopfMeanFix, col=clr1, lwd=lwd, type="b")
+  points(dt.sum$bin, dt.sum$knopfMeanFix, col=clr1, pch = 19, cex=0.8)
+  
+  lines(dt.sum$bin, dt.sum$ballonMeanFix, col=clr2, lty=4, lwd=lwd)
+  lines(dt.sum$bin, dt.sum$blumeMeanFix, col=clr2, lwd=lwd)
+  
+  points(dt.sum$bin, dt.sum$flascheMeanFix, col=clr1, pch = 19)
+  lines(dt.sum$bin, dt.sum$flascheMeanFix, col=clr1, lty=4, lwd=lwd)
+  
+  
+  lines(c(divergence, divergence), c(15, 35), col="#DE425B", lwd=lwd)
+  
+  dt.min = subset(dt.act, stepNo %in% c(startStep:endStep)) %>%
+    group_by(stepNo, simNo) %>%
+    summarise(min = min(time))
+  
+  dt.meanOnset = dt.min %>%
+    group_by(stepNo) %>%
+    summarise(meanOnset = mean(min))
+  
+  stepsNames = c("possessive", "adjective", "noun")
+  yPos = c(72, 77, 82)
+  
+  labelSteps = c(1, 4, 6)
+  j = 1
+  for(i in labelSteps){
+    lines(x=c(dt.meanOnset[i,2], dt.meanOnset[i,2]), y=c(-5, 105), col=clr2, lwd=1.5, lty=2)
+    text(dt.meanOnset[i,2]-130, yPos[j], stepsNames[j], srt=90, pos=4, cex=0.7, col=clr2, font=4)
+    j = j+1
+  }
+}
+# =========================================
